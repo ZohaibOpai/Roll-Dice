@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dice Roller - Advanced</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #07080f;
+    --surface: #0e1020;
+    --surface2: #151829;
+    --neon: #00f5d4;
+    --neon2: #f72585;
+    --neon3: #ffd60a;
+    --neon4: #7209b7;
+    --text: #e0e8ff;
+    --muted: #5a6080;
+    --dice-size: 90px;
+    --glow: 0 0 20px var(--neon), 0 0 40px rgba(0,245,212,0.3);
+    --glow2: 0 0 20px var(--neon2), 0 0 40px rgba(247,37,133,0.3);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Rajdhani', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Animated grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,245,212,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,245,212,0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Floating orbs */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: 0;
+    animation: floatOrb 8s ease-in-out infinite;
+  }
+  .orb1 { width: 400px; height: 400px; background: rgba(114,9,183,0.15); top: -100px; right: -100px; }
+  .orb2 { width: 300px; height: 300px; background: rgba(0,245,212,0.08); bottom: -50px; left: -50px; animation-delay: -3s; }
+  .orb3 { width: 250px; height: 250px; background: rgba(247,37,133,0.08); top: 50%; left: 40%; animation-delay: -5s; }
+
+  @keyframes floatOrb {
+    0%, 100% { transform: translate(0, 0); }
+    33% { transform: translate(20px, -30px); }
+    66% { transform: translate(-15px, 20px); }
+  }
+
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  /* Header */
+  header {
+    text-align: center;
+    padding: 40px 0 30px;
+    position: relative;
+  }
+
+  .logo-line {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+
+  .logo-icon {
+    width: 48px; height: 48px;
+    background: linear-gradient(135deg, var(--neon), var(--neon4));
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+    box-shadow: var(--glow);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 20px var(--neon), 0 0 40px rgba(0,245,212,0.3); }
+    50% { box-shadow: 0 0 35px var(--neon), 0 0 70px rgba(0,245,212,0.5); }
+  }
+
+  h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--neon) 0%, #7209b7 50%, var(--neon2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .subtitle {
+    font-size: 0.95rem;
+    color: var(--muted);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  /* Mode selector */
+  .mode-bar {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 20px 0 30px;
+    flex-wrap: wrap;
+  }
+
+  .mode-btn {
+    padding: 8px 20px;
+    border-radius: 6px;
+    border: 1px solid var(--muted);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Orbitron', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+  }
+
+  .mode-btn:hover, .mode-btn.active {
+    border-color: var(--neon);
+    color: var(--neon);
+    background: rgba(0,245,212,0.08);
+    box-shadow: 0 0 15px rgba(0,245,212,0.2);
+  }
+
+  /* Main grid */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 24px;
+    align-items: start;
+  }
+
+  @media (max-width: 768px) {
+    .main-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Arena */
+  .arena {
+    background: var(--surface);
+    border: 1px solid rgba(0,245,212,0.1);
+    border-radius: 20px;
+    padding: 40px 30px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .arena::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--neon), var(--neon4), var(--neon2), transparent);
+    opacity: 0.7;
+  }
+
+  /* Dice count selector */
+  .dice-selector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 36px;
+  }
+
+  .dice-selector label {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .count-btns {
+    display: flex;
+    gap: 6px;
+  }
+
+  .count-btn {
+    width: 38px; height: 38px;
+    border-radius: 8px;
+    border: 1px solid var(--surface2);
+    background: var(--surface2);
+    color: var(--muted);
+    font-family: 'Orbitron', monospace;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .count-btn:hover, .count-btn.active {
+    border-color: var(--neon);
+    color: var(--neon);
+    background: rgba(0,245,212,0.1);
+    box-shadow: 0 0 12px rgba(0,245,212,0.2);
+  }
+
+  /* Dice stage */
+  .dice-stage {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 28px;
+    min-height: 160px;
+    margin-bottom: 36px;
+    perspective: 800px;
+  }
+
+  /* 3D Dice */
+  .dice-3d {
+    width: var(--dice-size);
+    height: var(--dice-size);
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.1s;
+    cursor: pointer;
+  }
+
+  .dice-3d.rolling {
+    animation: rollDice 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  }
+
+  @keyframes rollDice {
+    0%   { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+    15%  { transform: rotateX(180deg) rotateY(90deg) rotateZ(45deg) scale(1.1); }
+    30%  { transform: rotateX(360deg) rotateY(180deg) rotateZ(90deg); }
+    45%  { transform: rotateX(540deg) rotateY(270deg) rotateZ(135deg) scale(0.95); }
+    60%  { transform: rotateX(720deg) rotateY(360deg) rotateZ(180deg) scale(1.05); }
+    75%  { transform: rotateX(810deg) rotateY(450deg) rotateZ(225deg); }
+    90%  { transform: rotateX(870deg) rotateY(500deg) rotateZ(250deg) scale(1.02); }
+    100% { transform: rotateX(var(--final-rx)) rotateY(var(--final-ry)) rotateZ(var(--final-rz)); }
+  }
+
+  .face {
+    position: absolute;
+    width: var(--dice-size);
+    height: var(--dice-size);
+    background: linear-gradient(135deg, #1a1d35, #0e1020);
+    border: 2px solid rgba(0,245,212,0.25);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backface-visibility: hidden;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
+  }
+
+  /* Dot grid for each face */
+  .dots {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    width: 65%;
+    height: 65%;
+    gap: 2px;
+  }
+
+  .dot {
+    border-radius: 50%;
+    width: 10px; height: 10px;
+    justify-self: center;
+    align-self: center;
+    transition: background 0.3s;
+  }
+
+  .dot.active {
+    background: var(--neon);
+    box-shadow: 0 0 8px var(--neon), 0 0 16px rgba(0,245,212,0.5);
+  }
+
+  .dot.inactive { background: transparent; }
+
+  /* Face transforms */
+  .face-1 { transform: translateZ(calc(var(--dice-size)/2)); }
+  .face-2 { transform: rotateY(180deg) translateZ(calc(var(--dice-size)/2)); }
+  .face-3 { transform: rotateY(90deg) translateZ(calc(var(--dice-size)/2)); }
+  .face-4 { transform: rotateY(-90deg) translateZ(calc(var(--dice-size)/2)); }
+  .face-5 { transform: rotateX(90deg) translateZ(calc(var(--dice-size)/2)); }
+  .face-6 { transform: rotateX(-90deg) translateZ(calc(var(--dice-size)/2)); }
+
+  /* Current value badge */
+  .dice-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .val-badge {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.4rem;
+    font-weight: 900;
+    color: var(--neon);
+    text-shadow: 0 0 15px var(--neon);
+    min-width: 40px;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .val-badge.show { opacity: 1; }
+
+  /* Total display */
+  .total-panel {
+    text-align: center;
+    margin-bottom: 36px;
+    padding: 20px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 14px;
+    border: 1px solid rgba(0,245,212,0.08);
+    position: relative;
+  }
+
+  .total-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .total-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 3.5rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--neon3), var(--neon2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+    transition: all 0.4s;
+  }
+
+  .result-tag {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 3px 14px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-family: 'Orbitron', monospace;
+    letter-spacing: 2px;
+    opacity: 0;
+    transition: opacity 0.3s 0.5s;
+  }
+
+  .result-tag.show { opacity: 1; }
+  .result-tag.fire { background: rgba(247,37,133,0.15); border: 1px solid var(--neon2); color: var(--neon2); }
+  .result-tag.cool { background: rgba(0,245,212,0.1); border: 1px solid var(--neon); color: var(--neon); }
+  .result-tag.meh  { background: rgba(255,214,10,0.1); border: 1px solid var(--neon3); color: var(--neon3); }
+
+  /* Roll button */
+  .roll-btn {
+    width: 100%;
+    padding: 18px;
+    border-radius: 14px;
+    border: none;
+    background: linear-gradient(135deg, var(--neon) 0%, var(--neon4) 100%);
+    color: #000;
+    font-family: 'Orbitron', monospace;
+    font-size: 1rem;
+    font-weight: 900;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s;
+    box-shadow: 0 8px 30px rgba(0,245,212,0.3);
+  }
+
+  .roll-btn::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+  }
+
+  .roll-btn:hover::before { left: 100%; }
+  .roll-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,245,212,0.5); }
+  .roll-btn:active { transform: translateY(1px); }
+  .roll-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  /* Ripple */
+  .ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    animation: rippleAnim 0.6s ease-out;
+    pointer-events: none;
+  }
+
+  @keyframes rippleAnim {
+    from { width: 0; height: 0; opacity: 1; transform: translate(-50%, -50%); }
+    to { width: 200px; height: 200px; opacity: 0; transform: translate(-50%, -50%); }
+  }
+
+  /* Sidebar */
+  .sidebar { display: flex; flex-direction: column; gap: 18px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid rgba(0,245,212,0.08);
+    border-radius: 16px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card-header {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-header::before {
+    content: '';
+    display: block;
+    width: 4px; height: 14px;
+    background: var(--neon);
+    border-radius: 2px;
+    box-shadow: 0 0 8px var(--neon);
+  }
+
+  /* Stats grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .stat-item {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.04);
+    transition: all 0.2s;
+  }
+
+  .stat-item:hover {
+    border-color: rgba(0,245,212,0.15);
+    background: rgba(0,245,212,0.05);
+  }
+
+  .stat-val {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: var(--neon3);
+    line-height: 1;
+  }
+
+  .stat-lbl {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 4px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* History */
+  .history-list {
+    max-height: 220px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-right: 4px;
+  }
+
+  .history-list::-webkit-scrollbar { width: 3px; }
+  .history-list::-webkit-scrollbar-track { background: transparent; }
+  .history-list::-webkit-scrollbar-thumb { background: var(--neon4); border-radius: 3px; }
+
+  .history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--surface2);
+    border-radius: 8px;
+    border-left: 2px solid transparent;
+    font-size: 0.85rem;
+    animation: slideIn 0.3s ease;
+    transition: border-color 0.2s;
+  }
+
+  .history-item:hover { border-left-color: var(--neon); }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .history-rolls {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+
+  .roll-chip {
+    width: 24px; height: 24px;
+    border-radius: 5px;
+    background: rgba(0,245,212,0.1);
+    border: 1px solid rgba(0,245,212,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.7rem;
+    color: var(--neon);
+    font-weight: 700;
+  }
+
+  .roll-chip.six {
+    background: rgba(247,37,133,0.15);
+    border-color: var(--neon2);
+    color: var(--neon2);
+    box-shadow: 0 0 8px rgba(247,37,133,0.3);
+  }
+
+  .roll-chip.one {
+    background: rgba(255,214,10,0.1);
+    border-color: var(--neon3);
+    color: var(--neon3);
+  }
+
+  .history-sum {
+    font-family: 'Orbitron', monospace;
+    font-size: 1rem;
+    font-weight: 900;
+    color: var(--text);
+  }
+
+  .history-empty {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+    padding: 20px;
+    letter-spacing: 1px;
+  }
+
+  /* Probability bar */
+  .prob-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-size: 0.8rem;
+  }
+
+  .prob-label {
+    width: 20px;
+    font-family: 'Orbitron', monospace;
+    color: var(--muted);
+    text-align: center;
+    font-size: 0.7rem;
+  }
+
+  .prob-bar-bg {
+    flex: 1;
+    height: 6px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .prob-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--neon), var(--neon4));
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .prob-count {
+    width: 28px;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.7rem;
+    color: var(--neon);
+    text-align: right;
+  }
+
+  /* Clear button */
+  .clear-btn {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(247,37,133,0.3);
+    background: rgba(247,37,133,0.05);
+    color: var(--neon2);
+    font-family: 'Orbitron', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 12px;
+  }
+
+  .clear-btn:hover {
+    background: rgba(247,37,133,0.12);
+    box-shadow: 0 0 15px rgba(247,37,133,0.2);
+  }
+
+  /* Confetti / Explosion */
+  .particle {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    border-radius: 3px;
+    animation: particleFly 1s ease-out forwards;
+  }
+
+  @keyframes particleFly {
+    0%   { opacity: 1; transform: translate(0,0) rotate(0deg) scale(1); }
+    100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(720deg) scale(0); }
+  }
+
+  /* Shake mode */
+  .arena.shake { animation: arenaShake 0.5s ease; }
+
+  @keyframes arenaShake {
+    0%, 100% { transform: translateX(0); }
+    10% { transform: translateX(-6px) rotate(-0.5deg); }
+    20% { transform: translateX(6px) rotate(0.5deg); }
+    30% { transform: translateX(-5px) rotate(-0.3deg); }
+    40% { transform: translateX(5px) rotate(0.3deg); }
+    50% { transform: translateX(-4px); }
+    60% { transform: translateX(4px); }
+    70% { transform: translateX(-2px); }
+  }
+
+  /* Score bar (for game mode) */
+  .score-banner {
+    display: none;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 16px;
+    background: var(--surface);
+    border: 1px solid rgba(0,245,212,0.1);
+    border-radius: 14px;
+    padding: 16px 24px;
+    margin-bottom: 24px;
+  }
+
+  .score-banner.visible { display: grid; }
+
+  .player-score {
+    text-align: center;
+  }
+
+  .player-name {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .player-pts {
+    font-family: 'Orbitron', monospace;
+    font-size: 2rem;
+    font-weight: 900;
+  }
+
+  .player-pts.p1 { color: var(--neon); }
+  .player-pts.p2 { color: var(--neon2); }
+
+  .vs-badge {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: var(--muted);
+  }
+
+  .turn-indicator {
+    font-size: 0.7rem;
+    font-family: 'Orbitron', monospace;
+    letter-spacing: 2px;
+    color: var(--neon3);
+    margin-top: 4px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .turn-indicator.show { opacity: 1; }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    padding: 30px 0 20px;
+    color: var(--muted);
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  /* Number fly animation on roll */
+  .fly-number {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: 2rem;
+    animation: flyUp 0.8s ease-out forwards;
+  }
+
+  @keyframes flyUp {
+    0%   { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-80px) scale(1.5); }
+  }
+
+  /* Tooltip */
+  .tooltip-wrap { position: relative; }
+  .tooltip-wrap:hover .tooltip { opacity: 1; transform: translateY(-4px); }
+  .tooltip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) translateY(0);
+    background: #1a1d35;
+    border: 1px solid rgba(0,245,212,0.2);
+    color: var(--text);
+    font-size: 0.72rem;
+    padding: 5px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s;
+    z-index: 100;
+  }
+
+  /* Roll number flicker on 6 */
+  @keyframes flickerGlow {
+    0%, 100% { text-shadow: 0 0 10px var(--neon2); }
+    50% { text-shadow: 0 0 25px var(--neon2), 0 0 50px var(--neon2); }
+  }
+
+</style>
+</head>
+<body>
+
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+
+<div class="wrapper">
+  <header>
+    <div class="logo-line">
+      <div class="logo-icon">
+        <!-- Simple dice SVG icon -->
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="20" height="20" rx="4"/>
+          <circle cx="8" cy="8" r="1.5" fill="#000"/>
+          <circle cx="16" cy="16" r="1.5" fill="#000"/>
+          <circle cx="16" cy="8" r="1.5" fill="#000"/>
+          <circle cx="8" cy="16" r="1.5" fill="#000"/>
+          <circle cx="12" cy="12" r="1.5" fill="#000"/>
+        </svg>
+      </div>
+      <h1>Dice Forge</h1>
+    </div>
+    <p class="subtitle">Advanced Dice Rolling Engine</p>
+  </header>
+
+  <!-- Mode selector -->
+  <div class="mode-bar">
+    <button class="mode-btn active" onclick="setMode('free')" id="mode-free">Free Roll</button>
+    <button class="mode-btn" onclick="setMode('versus')" id="mode-versus">1v1 Battle</button>
+    <button class="mode-btn" onclick="setMode('target')" id="mode-target">Target Chase</button>
+  </div>
+
+  <!-- Score banner (versus mode) -->
+  <div class="score-banner" id="score-banner">
+    <div class="player-score">
+      <div class="player-name">Player 1</div>
+      <div class="player-pts p1" id="p1-score">0</div>
+      <div class="turn-indicator show" id="p1-turn">YOUR TURN</div>
+    </div>
+    <div class="vs-badge">VS</div>
+    <div class="player-score">
+      <div class="player-name">Player 2</div>
+      <div class="player-pts p2" id="p2-score">0</div>
+      <div class="turn-indicator" id="p2-turn">YOUR TURN</div>
+    </div>
+  </div>
+
+  <!-- Target chase banner -->
+  <div id="target-banner" style="display:none; text-align:center; margin-bottom:24px; padding:16px 24px; background:var(--surface); border:1px solid rgba(255,214,10,0.2); border-radius:14px;">
+    <div style="font-family:'Orbitron',monospace; font-size:0.6rem; color:var(--muted); letter-spacing:3px; margin-bottom:6px;">TARGET SCORE</div>
+    <div style="font-family:'Orbitron',monospace; font-size:2rem; font-weight:900; color:var(--neon3);" id="target-display">21</div>
+    <div style="font-size:0.8rem; color:var(--muted); margin-top:4px;" id="target-status">Roll to reach the target exactly!</div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:12px;">
+      <button class="mode-btn active" id="target-new-btn" onclick="newTargetGame()" style="padding:6px 16px;">New Target</button>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <!-- Arena -->
+    <div class="arena" id="arena">
+      <!-- Dice count -->
+      <div class="dice-selector">
+        <label>Dice Count</label>
+        <div class="count-btns">
+          <button class="count-btn active tooltip-wrap" onclick="setDiceCount(1)" id="cnt-1">1
+            <span class="tooltip">1 Die</span>
+          </button>
+          <button class="count-btn tooltip-wrap" onclick="setDiceCount(2)" id="cnt-2">2
+            <span class="tooltip">2 Dice</span>
+          </button>
+          <button class="count-btn tooltip-wrap" onclick="setDiceCount(3)" id="cnt-3">3
+            <span class="tooltip">3 Dice</span>
+          </button>
+          <button class="count-btn tooltip-wrap" onclick="setDiceCount(4)" id="cnt-4">4
+            <span class="tooltip">4 Dice</span>
+          </button>
+          <button class="count-btn tooltip-wrap" onclick="setDiceCount(5)" id="cnt-5">5
+            <span class="tooltip">5 Dice</span>
+          </button>
+          <button class="count-btn tooltip-wrap" onclick="setDiceCount(6)" id="cnt-6">6
+            <span class="tooltip">6 Dice</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 3D Dice stage -->
+      <div class="dice-stage" id="dice-stage"></div>
+
+      <!-- Total -->
+      <div class="total-panel" id="total-panel">
+        <div class="total-label">Total Roll</div>
+        <div class="total-value" id="total-value">--</div>
+        <div class="result-tag" id="result-tag"></div>
+      </div>
+
+      <!-- Roll button -->
+      <button class="roll-btn" id="roll-btn" onclick="rollAllDice(event)">
+        Roll Dice
+      </button>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+
+      <!-- Stats card -->
+      <div class="card">
+        <div class="card-header">Statistics</div>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-val" id="stat-total">0</div>
+            <div class="stat-lbl">Rolls</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-val" id="stat-avg">-</div>
+            <div class="stat-lbl">Average</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-val" id="stat-high" style="color:var(--neon2)">-</div>
+            <div class="stat-lbl">Highest</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-val" id="stat-low" style="color:var(--neon3)">-</div>
+            <div class="stat-lbl">Lowest</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-val" id="stat-sixes" style="color:var(--neon)">0</div>
+            <div class="stat-lbl">Sixes</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-val" id="stat-ones" style="color:var(--neon3)">0</div>
+            <div class="stat-lbl">Ones</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Frequency card -->
+      <div class="card">
+        <div class="card-header">Face Frequency</div>
+        <div id="prob-bars"></div>
+      </div>
+
+      <!-- History card -->
+      <div class="card">
+        <div class="card-header">Roll History</div>
+        <div class="history-list" id="history-list">
+          <div class="history-empty">No rolls yet...</div>
+        </div>
+        <button class="clear-btn" onclick="clearHistory()">Clear History</button>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>
+    Dice Forge &mdash; Advanced Roll Engine &mdash; All rights reserved
+  </footer>
+</div>
+
+<script>
+  // ======= STATE =======
+  let diceCount = 1;
+  let currentValues = [];
+  let rolling = false;
+  let mode = 'free';
+  let stats = {
+    totalRolls: 0,
+    allSums: [],
+    allDiceValues: [],
+    sixes: 0,
+    ones: 0,
+    high: null,
+    low: null
+  };
+  let vsState = { turn: 1, p1: 0, p2: 0, rounds: 0, maxRounds: 5 };
+  let targetState = { target: 21, current: 0 };
+
+  // ======= FACE DOT PATTERNS =======
+  // Grid is 3x3 (9 cells), 1=dot active
+  const DOT_PATTERNS = {
+    1: [0,0,0, 0,1,0, 0,0,0],
+    2: [1,0,0, 0,0,0, 0,0,1],
+    3: [1,0,0, 0,1,0, 0,0,1],
+    4: [1,0,1, 0,0,0, 1,0,1],
+    5: [1,0,1, 0,1,0, 1,0,1],
+    6: [1,0,1, 1,0,1, 1,0,1],
+  };
+
+  // ======= FACE ROTATIONS (so the right face shows forward) =======
+  const FACE_ROTATIONS = {
+    1: { rx: 0,   ry: 0,   rz: 0 },
+    2: { rx: 0,   ry: 180, rz: 0 },
+    3: { rx: 0,   ry: -90, rz: 0 },
+    4: { rx: 0,   ry: 90,  rz: 0 },
+    5: { rx: -90, ry: 0,   rz: 0 },
+    6: { rx: 90,  ry: 0,   rz: 0 },
+  };
+
+  function buildDice(id) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'dice-wrapper';
+
+    const dice = document.createElement('div');
+    dice.className = 'dice-3d';
+    dice.id = 'dice-' + id;
+
+    for (let f = 1; f <= 6; f++) {
+      const face = document.createElement('div');
+      face.className = `face face-${f}`;
+      const dotsEl = document.createElement('div');
+      dotsEl.className = 'dots';
+      dotsEl.id = `dots-${id}-${f}`;
+      DOT_PATTERNS[f].forEach((active, i) => {
+        const dot = document.createElement('div');
+        dot.className = `dot ${active ? 'active' : 'inactive'}`;
+        dotsEl.appendChild(dot);
+      });
+      face.appendChild(dotsEl);
+      dice.appendChild(face);
+    }
+
+    const badge = document.createElement('div');
+    badge.className = 'val-badge';
+    badge.id = 'badge-' + id;
+
+    wrapper.appendChild(dice);
+    wrapper.appendChild(badge);
+    return wrapper;
+  }
+
+  function initDiceStage() {
+    const stage = document.getElementById('dice-stage');
+    stage.innerHTML = '';
+    currentValues = new Array(diceCount).fill(1);
+    for (let i = 0; i < diceCount; i++) {
+      stage.appendChild(buildDice(i));
+    }
+    // Reset total
+    document.getElementById('total-value').textContent = '--';
+    const tag = document.getElementById('result-tag');
+    tag.className = 'result-tag';
+    tag.textContent = '';
+    // Hide badges
+    for (let i = 0; i < diceCount; i++) {
+      const b = document.getElementById('badge-' + i);
+      if (b) b.classList.remove('show');
+    }
+  }
+
+  function setDiceCount(n) {
+    diceCount = n;
+    document.querySelectorAll('.count-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('cnt-' + n).classList.add('active');
+    initDiceStage();
+    updateProbBars();
+  }
+
+  // ======= ROLL LOGIC =======
+  function rollAllDice(e) {
+    if (rolling) return;
+
+    // Ripple
+    if (e) {
+      const btn = document.getElementById('roll-btn');
+      const rect = btn.getBoundingClientRect();
+      const rip = document.createElement('div');
+      rip.className = 'ripple';
+      rip.style.left = (e.clientX - rect.left) + 'px';
+      rip.style.top = (e.clientY - rect.top) + 'px';
+      btn.appendChild(rip);
+      setTimeout(() => rip.remove(), 700);
+    }
+
+    rolling = true;
+    document.getElementById('roll-btn').disabled = true;
+
+    const newValues = [];
+    for (let i = 0; i < diceCount; i++) {
+      newValues.push(Math.floor(Math.random() * 6) + 1);
+    }
+
+    // Shake arena
+    const arena = document.getElementById('arena');
+    arena.classList.add('shake');
+    setTimeout(() => arena.classList.remove('shake'), 600);
+
+    // Hide badges
+    for (let i = 0; i < diceCount; i++) {
+      const b = document.getElementById('badge-' + i);
+      if (b) b.classList.remove('show');
+    }
+
+    // Reset total
+    document.getElementById('total-value').textContent = '--';
+    const tag = document.getElementById('result-tag');
+    tag.className = 'result-tag';
+
+    // Animate dice with stagger
+    const delays = newValues.map((_, i) => i * 80);
+    const maxDelay = Math.max(...delays);
+
+    newValues.forEach((val, i) => {
+      const dice = document.getElementById('dice-' + i);
+      if (!dice) return;
+
+      const rot = FACE_ROTATIONS[val];
+      const spins = 720; // extra full rotations for drama
+      const finalRx = rot.rx + spins;
+      const finalRy = rot.ry + spins;
+      const finalRz = rot.rz;
+
+      dice.style.setProperty('--final-rx', finalRx + 'deg');
+      dice.style.setProperty('--final-ry', finalRy + 'deg');
+      dice.style.setProperty('--final-rz', finalRz + 'deg');
+
+      setTimeout(() => {
+        dice.classList.remove('rolling');
+        void dice.offsetWidth; // force reflow
+        dice.classList.add('rolling');
+      }, delays[i]);
+    });
+
+    // After animation ends
+    setTimeout(() => {
+      newValues.forEach((val, i) => {
+        currentValues[i] = val;
+        // Show badge
+        const badge = document.getElementById('badge-' + i);
+        if (badge) {
+          badge.textContent = val;
+          badge.classList.add('show');
+          if (val === 6) badge.style.color = 'var(--neon2)';
+          else if (val === 1) badge.style.color = 'var(--neon3)';
+          else badge.style.color = 'var(--neon)';
+        }
+
+        // Set final rotation WITHOUT animation
+        const dice = document.getElementById('dice-' + i);
+        if (dice) {
+          const rot = FACE_ROTATIONS[val];
+          const spins = 720;
+          dice.style.transform = `rotateX(${rot.rx + spins}deg) rotateY(${rot.ry + spins}deg)`;
+        }
+      });
+
+      const total = newValues.reduce((a, b) => a + b, 0);
+      document.getElementById('total-value').textContent = total;
+
+      // Tag
+      const maxPossible = diceCount * 6;
+      const minPossible = diceCount;
+      const ratio = (total - minPossible) / (maxPossible - minPossible);
+
+      if (ratio >= 0.8) {
+        tag.textContent = 'MEGA ROLL';
+        tag.className = 'result-tag fire show';
+      } else if (ratio <= 0.2) {
+        tag.textContent = 'TERRIBLE LUCK';
+        tag.className = 'result-tag meh show';
+      } else {
+        tag.textContent = 'SOLID ROLL';
+        tag.className = 'result-tag cool show';
+      }
+
+      // Confetti for high rolls
+      if (ratio >= 0.85) fireConfetti();
+
+      // Fly numbers
+      newValues.forEach((val, i) => {
+        if (val === 6) {
+          const badge = document.getElementById('badge-' + i);
+          if (badge) {
+            const r = badge.getBoundingClientRect();
+            spawnFlyNumber(r.left + r.width / 2, r.top, '6!', 'var(--neon2)');
+          }
+        }
+      });
+
+      updateStats(newValues, total);
+      addToHistory(newValues, total);
+      handleModeLogic(total);
+      updateProbBars();
+
+      rolling = false;
+      document.getElementById('roll-btn').disabled = false;
+
+    }, maxDelay + 750);
+  }
+
+  // ======= FLY NUMBER =======
+  function spawnFlyNumber(x, y, text, color) {
+    const el = document.createElement('div');
+    el.className = 'fly-number';
+    el.textContent = text;
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    el.style.color = color;
+    el.style.textShadow = `0 0 20px ${color}`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 900);
+  }
+
+  // ======= CONFETTI =======
+  function fireConfetti() {
+    const colors = ['#00f5d4', '#f72585', '#ffd60a', '#7209b7', '#4cc9f0'];
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
+    for (let i = 0; i < 40; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      const angle = (i / 40) * 360;
+      const dist = 150 + Math.random() * 150;
+      const dx = Math.cos(angle * Math.PI / 180) * dist;
+      const dy = Math.sin(angle * Math.PI / 180) * dist - 100;
+      p.style.cssText = `
+        left:${cx}px; top:${cy}px;
+        width:${4 + Math.random() * 8}px;
+        height:${4 + Math.random() * 8}px;
+        background:${colors[i % colors.length]};
+        --dx:${dx}px; --dy:${dy}px;
+        animation-duration:${0.6 + Math.random() * 0.6}s;
+        box-shadow: 0 0 6px ${colors[i % colors.length]};
+      `;
+      document.body.appendChild(p);
+      setTimeout(() => p.remove(), 1300);
+    }
+  }
+
+  // ======= STATS =======
+  function updateStats(vals, total) {
+    stats.totalRolls++;
+    stats.allSums.push(total);
+    stats.allDiceValues.push(...vals);
+    stats.sixes += vals.filter(v => v === 6).length;
+    stats.ones += vals.filter(v => v === 1).length;
+    if (stats.high === null || total > stats.high) stats.high = total;
+    if (stats.low === null || total < stats.low) stats.low = total;
+
+    document.getElementById('stat-total').textContent = stats.totalRolls;
+    const avg = stats.allSums.reduce((a, b) => a + b, 0) / stats.allSums.length;
+    document.getElementById('stat-avg').textContent = avg.toFixed(1);
+    document.getElementById('stat-high').textContent = stats.high ?? '-';
+    document.getElementById('stat-low').textContent = stats.low ?? '-';
+    document.getElementById('stat-sixes').textContent = stats.sixes;
+    document.getElementById('stat-ones').textContent = stats.ones;
+  }
+
+  // ======= HISTORY =======
+  function addToHistory(vals, total) {
+    const list = document.getElementById('history-list');
+    const empty = list.querySelector('.history-empty');
+    if (empty) empty.remove();
+
+    const item = document.createElement('div');
+    item.className = 'history-item';
+
+    const rollsEl = document.createElement('div');
+    rollsEl.className = 'history-rolls';
+
+    vals.forEach(v => {
+      const chip = document.createElement('div');
+      chip.className = `roll-chip${v === 6 ? ' six' : v === 1 ? ' one' : ''}`;
+      chip.textContent = v;
+      rollsEl.appendChild(chip);
+    });
+
+    const sumEl = document.createElement('div');
+    sumEl.className = 'history-sum';
+    sumEl.textContent = total;
+
+    item.appendChild(rollsEl);
+    item.appendChild(sumEl);
+
+    list.insertBefore(item, list.firstChild);
+
+    // Keep max 30
+    while (list.children.length > 30) {
+      list.removeChild(list.lastChild);
+    }
+  }
+
+  function clearHistory() {
+    const list = document.getElementById('history-list');
+    list.innerHTML = '<div class="history-empty">No rolls yet...</div>';
+    stats = { totalRolls:0, allSums:[], allDiceValues:[], sixes:0, ones:0, high:null, low:null };
+    document.getElementById('stat-total').textContent = '0';
+    document.getElementById('stat-avg').textContent = '-';
+    document.getElementById('stat-high').textContent = '-';
+    document.getElementById('stat-low').textContent = '-';
+    document.getElementById('stat-sixes').textContent = '0';
+    document.getElementById('stat-ones').textContent = '0';
+    updateProbBars();
+    document.getElementById('total-value').textContent = '--';
+    const tag = document.getElementById('result-tag');
+    tag.className = 'result-tag';
+    tag.textContent = '';
+  }
+
+  // ======= PROBABILITY BARS =======
+  function updateProbBars() {
+    const container = document.getElementById('prob-bars');
+    container.innerHTML = '';
+    const freq = {1:0, 2:0, 3:0, 4:0, 5:0, 6:0};
+    stats.allDiceValues.forEach(v => { if (freq[v] !== undefined) freq[v]++; });
+    const maxFreq = Math.max(...Object.values(freq)) || 1;
+
+    for (let f = 1; f <= 6; f++) {
+      const row = document.createElement('div');
+      row.className = 'prob-row';
+
+      const lbl = document.createElement('div');
+      lbl.className = 'prob-label';
+      lbl.textContent = f;
+
+      const bg = document.createElement('div');
+      bg.className = 'prob-bar-bg';
+      const fill = document.createElement('div');
+      fill.className = 'prob-bar-fill';
+
+      const cnt = document.createElement('div');
+      cnt.className = 'prob-count';
+      cnt.textContent = freq[f];
+
+      bg.appendChild(fill);
+      row.appendChild(lbl);
+      row.appendChild(bg);
+      row.appendChild(cnt);
+      container.appendChild(row);
+
+      // animate
+      setTimeout(() => {
+        fill.style.width = ((freq[f] / maxFreq) * 100) + '%';
+      }, 50);
+    }
+  }
+
+  // ======= MODE LOGIC =======
+  function setMode(m) {
+    mode = m;
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('mode-' + m).classList.add('active');
+
+    document.getElementById('score-banner').classList.toggle('visible', m === 'versus');
+    document.getElementById('target-banner').style.display = m === 'target' ? 'block' : 'none';
+
+    if (m === 'versus') {
+      vsState = { turn: 1, p1: 0, p2: 0, rounds: 0, maxRounds: 5 };
+      document.getElementById('p1-score').textContent = 0;
+      document.getElementById('p2-score').textContent = 0;
+      updateVsTurnUI();
+      document.getElementById('roll-btn').textContent = 'Player 1 Roll';
+    } else if (m === 'target') {
+      newTargetGame();
+    } else {
+      document.getElementById('roll-btn').textContent = 'Roll Dice';
+    }
+  }
+
+  function handleModeLogic(total) {
+    if (mode === 'versus') {
+      if (vsState.turn === 1) {
+        vsState.p1 += total;
+        document.getElementById('p1-score').textContent = vsState.p1;
+        vsState.turn = 2;
+        updateVsTurnUI();
+        document.getElementById('roll-btn').textContent = 'Player 2 Roll';
+        vsState.rounds++;
+      } else {
+        vsState.p2 += total;
+        document.getElementById('p2-score').textContent = vsState.p2;
+        vsState.turn = 1;
+        updateVsTurnUI();
+        document.getElementById('roll-btn').textContent = 'Player 1 Roll';
+      }
+
+      // Check after full rounds
+      if (vsState.rounds >= vsState.maxRounds * 2) {
+        setTimeout(() => {
+          const winner = vsState.p1 > vsState.p2 ? 'Player 1' : vsState.p2 > vsState.p1 ? 'Player 2' : 'TIE';
+          fireConfetti();
+          spawnFlyNumber(window.innerWidth/2, window.innerHeight/2, winner + ' WINS!', 'var(--neon3)');
+          vsState = { turn: 1, p1: 0, p2: 0, rounds: 0, maxRounds: 5 };
+          setTimeout(() => {
+            document.getElementById('p1-score').textContent = 0;
+            document.getElementById('p2-score').textContent = 0;
+            updateVsTurnUI();
+          }, 2000);
+        }, 600);
+      }
+    }
+
+    if (mode === 'target') {
+      targetState.current += total;
+      const diff = targetState.target - targetState.current;
+      const statusEl = document.getElementById('target-status');
+
+      if (targetState.current === targetState.target) {
+        statusEl.textContent = 'BULLSEYE! You hit the target!';
+        statusEl.style.color = 'var(--neon)';
+        fireConfetti();
+        spawnFlyNumber(window.innerWidth/2, window.innerHeight/3, 'BULLSEYE!', 'var(--neon)');
+        document.getElementById('roll-btn').disabled = true;
+      } else if (targetState.current > targetState.target) {
+        statusEl.textContent = 'BUST! You went over by ' + (targetState.current - targetState.target) + '. Try again.';
+        statusEl.style.color = 'var(--neon2)';
+        document.getElementById('roll-btn').disabled = true;
+      } else {
+        statusEl.textContent = 'Need ' + diff + ' more. Current: ' + targetState.current;
+        statusEl.style.color = 'var(--muted)';
+      }
+    }
+  }
+
+  function updateVsTurnUI() {
+    document.getElementById('p1-turn').classList.toggle('show', vsState.turn === 1);
+    document.getElementById('p2-turn').classList.toggle('show', vsState.turn === 2);
+  }
+
+  function newTargetGame() {
+    targetState.target = Math.floor(Math.random() * 25) + 10; // 10-35
+    targetState.current = 0;
+    document.getElementById('target-display').textContent = targetState.target;
+    document.getElementById('target-status').textContent = 'Roll to reach the target exactly!';
+    document.getElementById('target-status').style.color = 'var(--muted)';
+    document.getElementById('roll-btn').disabled = false;
+  }
+
+  // ======= KEYBOARD SUPPORT =======
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' || e.code === 'Enter') {
+      const btn = document.getElementById('roll-btn');
+      if (!btn.disabled) {
+        e.preventDefault();
+        btn.click();
+      }
+    }
+  });
+
+  // ======= INIT =======
+  initDiceStage();
+  updateProbBars();
+</script>
+</body>
+</html>
